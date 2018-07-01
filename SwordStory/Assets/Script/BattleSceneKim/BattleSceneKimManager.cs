@@ -12,13 +12,24 @@ public class BattleSceneKimManager : MonoBehaviour {
 	public GameObject textWinOrLoss; //勝敗テキスト
 	public GameObject myAttack; //スクリプト
 	public GameObject defenseManager; //スクリプト
+	public GameObject imageEnemy; //敵画像
 	public GameObject imageSpecialMoveGauge; //必殺技ゲージ画像
+	public Sprite[] spriteSpecialMoveGauge = new Sprite[2]; //必殺技ゲージが満タンになった時の画像
+	public GameObject imageShield; //シールド画像
 	public GameObject specialMoveManager; //SpecialMoveManager
+
 
 	//メンバ変数
 	private float timeEnemyBreak = 10.0f; //敵の休憩時間
 	private float timeElapsed = 0.0f; //時間を蓄積させる
 	private bool isFinishedEnemyAttack = false; //敵の攻撃が終わったかどうか
+	private bool isSpecialMove = false; //この攻撃で必殺技になるかどうか
+	private int enemyHp = 100; //敵のHP
+	private int playerHp = 10; //プレイヤーのHP
+
+	void OnEnable(){
+		timeElapsed = timeEnemyBreak;
+	}
 
 	void Update(){
 		//敵が休憩に入ったら時間計測開始
@@ -32,7 +43,7 @@ public class BattleSceneKimManager : MonoBehaviour {
 			//敵の攻撃開始
 			isFinishedEnemyAttack = false;
 			createEnemyAttack.GetComponent<CreateEnemyAttack> ().enableAttack = true;
-
+			imageEnemy.GetComponent<EnemyManager> ().MoveEnemyImage ();
 
 		}
 	}
@@ -40,39 +51,82 @@ public class BattleSceneKimManager : MonoBehaviour {
 	//敵の攻撃ターンが終わったら受け取る
 	public void EndEnemyAttack(){
 		isFinishedEnemyAttack = true;
+		imageEnemy.GetComponent<EnemyManager> ().RevertToInitPos ();
 	}
 
 	//プレイヤーが攻撃を受ける
-	public void PlayerReceiveAttack(float damage){
+	public void PlayerReceiveAttack(int damage){
 		//自分のHP減少
-		sliderMyHp.GetComponent<Slider> ().value -= damage;
-
-		if (sliderMyHp.GetComponent<Slider> ().value <= 0) {
+		Hashtable hash = new Hashtable(){
+			{"from", playerHp},
+			{"to", playerHp - damage},
+			{"time", 1f},
+			{"easeType",iTween.EaseType.easeOutCubic},
+			{"loopType",iTween.LoopType.none},
+			{"onupdate", "OnUpdateMyHp"},
+			{"onupdatetarget", gameObject},
+		};
+		iTween.ValueTo(sliderEnemyHp, hash);
+		playerHp -= damage;
+		Debug.Log (playerHp);
+		if (playerHp <= 0) {
 			//負け処理
+			sliderMyHp.GetComponent<Slider> ().value = 0;
+			this.gameObject.SetActive(false);
 			createEnemyAttack.SetActive(false);
 			defenseManager.SetActive (false);
 			myAttack.SetActive (false);
+			imageShield.SetActive (false);
 
 			textWinOrLoss.GetComponent<Text>().text = "Lose...";
 			textWinOrLoss.GetComponent<Text> ().color = Color.blue;
+			imageEnemy.GetComponent<EnemyManager> ().RevertToInitPos ();
 
 		}
 	}
 
 	//敵にダメージを与える
-	public void EnemyReceiveAttack(float damage){
-		//敵のHP減少
-		sliderEnemyHp.GetComponent<Slider>().value -= damage;
+	public void EnemyReceiveAttack(int damage){
+		if (isSpecialMove) {
+			//必殺技発動
+			specialMoveManager.SetActive(true);
+			createEnemyAttack.SetActive (false);
+			defenseManager.SetActive (false);
+			myAttack.SetActive (false);
+			this.gameObject.SetActive (false);
 
-		if (sliderEnemyHp.GetComponent<Slider> ().value <= 0) {
+			isSpecialMove = false;
+
+			imageSpecialMoveGauge.GetComponent<Image> ().fillAmount = 0.0f;
+			imageSpecialMoveGauge.GetComponent<Image>().sprite = spriteSpecialMoveGauge[0];
+		} else {
+			//敵のHP減少
+			Hashtable hash = new Hashtable(){
+				{"from", enemyHp},
+				{"to", enemyHp - damage},
+				{"time", 1f},
+				{"easeType",iTween.EaseType.easeOutCubic},
+				{"loopType",iTween.LoopType.none},
+				{"onupdate", "OnUpdateEnemyHp"},
+				{"onupdatetarget", gameObject},
+			};
+			iTween.ValueTo(sliderEnemyHp, hash);
+			enemyHp -= damage;
+		}
+
+		if (enemyHp <= 0) {
 			//勝ち処理
+			sliderEnemyHp.GetComponent<Slider> ().value = 0;
 			this.gameObject.SetActive(false);
 			createEnemyAttack.SetActive (false);
 			defenseManager.SetActive (false);
+			myAttack.SetActive (false);
+			imageShield.SetActive (false);
 
-			textWinOrLoss.SetActive (true);
 			textWinOrLoss.GetComponent<Text>().text = "WIN!!";
 			textWinOrLoss.GetComponent<Text> ().color = Color.red;
+			imageEnemy.GetComponent<EnemyManager> ().RevertToInitPos ();
+			
 		}
 
 	}
@@ -83,15 +137,23 @@ public class BattleSceneKimManager : MonoBehaviour {
 		imageSpecialMoveGauge.GetComponent<Image> ().fillAmount += quantity;
 
 		if (imageSpecialMoveGauge.GetComponent<Image> ().fillAmount >= 1.0f) {
-			//必殺技発動
-			specialMoveManager.SetActive(true);
-			createEnemyAttack.SetActive (false);
-			defenseManager.SetActive (false);
-			myAttack.SetActive (false);
-			this.gameObject.SetActive (false);
+			//必殺技発動可能
+			isSpecialMove = true;
 
-			imageSpecialMoveGauge.GetComponent<Image> ().fillAmount = 0.0f;
+			//必殺技ゲージの画像変更
+			imageSpecialMoveGauge.GetComponent<Image>().sprite = spriteSpecialMoveGauge[1];
+
 		}
+	}
+
+	//敵のHPを減少させる
+	void OnUpdateEnemyHp(float value){
+		sliderEnemyHp.GetComponent<Slider> ().value = value;
+	}
+
+	//自分のHPを減少させる
+	void OnUpdateMyHp(float value){
+		sliderMyHp.GetComponent<Slider> ().value = value;
 	}
 
 }

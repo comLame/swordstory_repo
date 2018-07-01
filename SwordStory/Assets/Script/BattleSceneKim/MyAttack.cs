@@ -23,6 +23,7 @@ public class MyAttack : MonoBehaviour {
 	private float dig; //フリックの角度
 	private float seconds = 0; //経過時間（秒）
 	private float maxTime = 8; //攻撃可能時間
+	private float timeElapsed = 0f; //時間を蓄積させる
 
 	void Update()
 	{
@@ -30,7 +31,6 @@ public class MyAttack : MonoBehaviour {
 		Flick ();
 		if (seconds >= maxTime) {
 			//敵の攻撃に移る
-			Debug.Log("敵のターン");
 			seconds = 0;
 			this.gameObject.SetActive (false);
 			createEnemyAttack.SetActive (true);
@@ -43,17 +43,34 @@ public class MyAttack : MonoBehaviour {
 	}
 
 	void Flick(){
+		
 		if (Input.GetMouseButtonDown(0)){
+			//タイマー開始
+			timeElapsed += Time.deltaTime;
+			//タップの座標取得
 			touchStartPos = new Vector3(Input.mousePosition.x,
 				Input.mousePosition.y,
 				Input.mousePosition.z);
 		}
 
+		if (Input.GetMouseButton(0)){
+			//タップしている間もタイマー継続
+			timeElapsed += Time.deltaTime;
+		}
+
+
 		if (Input.GetMouseButtonUp(0)){
+			//マウスの座標取得
 			touchEndPos = new Vector3(Input.mousePosition.x,
 				Input.mousePosition.y,
 				Input.mousePosition.z);
-			GetDirection();
+			
+			//タップ開始から話すまでが0.3秒以下だったらスワイプと認識
+			if (timeElapsed <= 0.3) {
+				GetDirection ();
+			}
+			//タイマーを初期化
+			timeElapsed = 0;
 		}
 	}
 
@@ -100,11 +117,13 @@ public class MyAttack : MonoBehaviour {
 		imageEnemy.GetComponent<Animation>().Play();
 		imageDamage.GetComponent<Animation>().Play();
 
+		//敵にダメージを与える
+		battleSceneManager.GetComponent<BattleSceneKimManager> ().EnemyReceiveAttack (2);
+
 		//必殺技ゲージ上昇
 		battleSceneManager.GetComponent<BattleSceneKimManager>().AscentSpecialMoveGauge(0.05f);
 
-		//敵にダメージを与える
-		battleSceneManager.GetComponent<BattleSceneKimManager> ().EnemyReceiveAttack (0.02f);
+
 
 	}
 }

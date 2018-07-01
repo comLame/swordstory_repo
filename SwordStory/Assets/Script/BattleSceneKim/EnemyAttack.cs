@@ -39,11 +39,14 @@ public class EnemyAttack : MonoBehaviour {
 
 	//シールド成功した時
 	void OnCollisionEnter2D (Collision2D collision) {
-		//守備成功の処理
-		Destroy(this.gameObject);
 
-		//必殺技ゲージ上昇
-		battleSceneManager.GetComponent<BattleSceneKimManager>().AscentSpecialMoveGauge(0.01f);
+		if (collision.gameObject.name == "ImageShield") {
+			//守備成功の処理
+			Destroy (this.gameObject);
+
+			//必殺技ゲージ上昇
+			battleSceneManager.GetComponent<BattleSceneKimManager> ().AscentSpecialMoveGauge (0.01f);
+		}
 	}
 
 
@@ -52,6 +55,6 @@ public class EnemyAttack : MonoBehaviour {
 		//攻撃を食らう処理
 		anim.Play();
 		Destroy(this.gameObject);
-		battleSceneManager.GetComponent<BattleSceneKimManager> ().PlayerReceiveAttack (0.1f);
+		battleSceneManager.GetComponent<BattleSceneKimManager> ().PlayerReceiveAttack (1);
 	}
 }

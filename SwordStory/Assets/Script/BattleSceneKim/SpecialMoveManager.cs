@@ -13,6 +13,7 @@ public class SpecialMoveManager : MonoBehaviour {
 	public GameObject textSpecialMove; //必殺技テキスト
 	public GameObject imageEnemy; //敵画像
 	public GameObject imageBackSpecialMove; //必殺技の時の背景
+	public GameObject imageShield; //シールド画像
 	public GameObject textBaku;
 	public GameObject textRetsu;
 	public GameObject textGiri;
@@ -40,12 +41,15 @@ public class SpecialMoveManager : MonoBehaviour {
 		initialTimingImagePos = imageTiming.transform.localPosition;
 		animSpecialMove = imageEnemy.GetComponent<Animation> ();
 		imageBack.SetActive (false);
+		imageShield.SetActive (false);
 		containerOrbImage.SetActive (true);
 		imageTiming.SetActive (true);
 	}
 
 	void OnEnable(){
+		imageEnemy.GetComponent<EnemyManager> ().RevertToInitPos ();
 		imageBack.SetActive (false);
+		imageShield.SetActive (false);
 		containerOrbImage.SetActive (true);
 		imageTiming.SetActive (true);
 		for (int i = 0; i < 5; i++) {
@@ -61,7 +65,6 @@ public class SpecialMoveManager : MonoBehaviour {
 		//タイミング画像の移動
 		imageTiming.transform.position += new Vector3(speedTimingImage, 0.0f);
 		if(imageTiming.transform.position.x >= 3.0f){
-			Debug.Log ("コマンド終了");
 			//必殺技コマンド終了
 			timeElapsed += Time.deltaTime;
 			//背景を黒に変更
@@ -102,7 +105,7 @@ public class SpecialMoveManager : MonoBehaviour {
 
 
 				//ダメージ計算
-				battleSceneManager.GetComponent<BattleSceneKimManager>().EnemyReceiveAttack(0.1f);
+				battleSceneManager.GetComponent<BattleSceneKimManager>().EnemyReceiveAttack(10);
 
 			}
 
